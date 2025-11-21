@@ -1,8 +1,7 @@
 import { MongoClient } from "mongodb";
 
 export default async function handler(req, res) {
-
-  // ---- CORS FIX ----
+  // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -10,42 +9,26 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
-  // -------------------
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Only POST allowed" });
   }
 
+  // Rest of your logic...
+  const uri = process.env.MONGO_URI;
+  const client = new MongoClient(uri);
   try {
-    const uri = process.env.MONGO_URI;
-    const client = new MongoClient(uri);
-
-    const data = req.body;
-
-    if (!data || Object.keys(data).length === 0) {
-      return res.status(400).json({ error: "No data received" });
-    }
-
     await client.connect();
-    const db = client.db("aruhDB");
-    const collection = db.collection("form_submissions");
-
+    const db = client.db("aruhDB"); // ensure this is your DB name
+    const collection = db.collection("leads"); // ensure collection name matches
     const result = await collection.insertOne({
-      ...data,
-      createdAt: new Date()
+      ...req.body,
+      submittedAt: new Date()
     });
-
-    return res.status(200).json({
-      message: "Form submitted successfully!",
-      id: result.insertedId
-    });
-
-  } catch (error) {
-    console.error("ERROR:", error);
-    return res.status(500).json({
-      error: "Server error",
-      details: error.message
-    });
+    return res.status(200).json({ success: true, id: result.insertedId });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Server error", details: err.message });
   }
 }
 
