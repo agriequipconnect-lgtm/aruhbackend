@@ -1,12 +1,28 @@
+import { MongoClient } from "mongodb";
+
+const uri = process.env.MONGO_URI;
+const client = new MongoClient(uri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+
+let clientPromise;
+
+if (!global._mongoClient) {
+  global._mongoClient = client.connect();
+}
+clientPromise = global._mongoClient;
+
 export default async function handler(req, res) {
 
   // ⭐⭐⭐ CORS HEADERS MUST COME FIRST ⭐⭐⭐
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 
+  // Allow OPTIONS (browser CORS preflight)
   if (req.method === "OPTIONS") {
-    return res.status(200).end(); // CORS preflight OK
+    return res.status(200).end();
   }
 
   // Allow only POST
@@ -27,12 +43,14 @@ export default async function handler(req, res) {
 
     const result = await collection.insertOne({
       ...data,
-      createdAt: new Date(),
+      createdAt: new Date()
     });
+
+    console.log("Inserted:", result.insertedId);
 
     return res.status(200).json({
       message: "Form submitted successfully!",
-      id: result.insertedId,
+      id: result.insertedId
     });
 
   } catch (error) {
